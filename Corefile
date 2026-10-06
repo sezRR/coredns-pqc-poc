@@ -1,0 +1,7 @@
+.:1053 {
+    errors
+    log
+    pqc pqc.test. /keys/mldsa44.seed {
+        max_udp 1232
+    }
+}

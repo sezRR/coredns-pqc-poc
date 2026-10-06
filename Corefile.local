@@ -1,0 +1,8 @@
+.:1053 {
+    bind 127.0.0.1
+    errors
+    log
+    pqc pqc.test. keys/native/private/mldsa44.seed {
+        max_udp 1232
+    }
+}

@@ -1,0 +1,54 @@
+name: coredns-pqc
+
+x-demo: &demo
+  image: coredns-pqc:demo
+  build: .
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  keygen:
+    <<: *demo
+    entrypoint: ["/usr/local/bin/keygen"]
+    command: ["-private-dir", "/private", "-public-dir", "/public"]
+    network_mode: none
+    volumes:
+      - signing_keys:/private
+      - trust_anchors:/public
+
+  coredns:
+    <<: *demo
+    depends_on:
+      keygen:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${DNS_PORT:-1053}:1053/udp"
+      - "127.0.0.1:${DNS_PORT:-1053}:1053/tcp"
+    volumes:
+      - signing_keys:/keys:ro
+      - ./Corefile:/Corefile:ro
+    read_only: true
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/verify", "-server", "127.0.0.1:1053", "-probe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  verifier:
+    <<: *demo
+    profiles: [demo]
+    entrypoint: ["/usr/local/bin/verify"]
+    command: ["-server", "coredns:1053", "-trust-anchor", "/trust/trust-anchor.ds", "-tamper"]
+    depends_on:
+      coredns:
+        condition: service_healthy
+    volumes:
+      - trust_anchors:/trust:ro
+    read_only: true
+    cap_drop: [ALL]
+
+volumes:
+  signing_keys:
+  trust_anchors:
